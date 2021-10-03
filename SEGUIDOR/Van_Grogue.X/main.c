@@ -480,7 +480,7 @@ void fim_de_pista()
 
 void f_timers (void) {
 
-    static unsigned char c_timer1 = 0, c_timer2 = 0;
+    static unsigned char c_timer2 = 0;
     if(f_calibra)
     {
         // Verifica se é o fim da pista a cada 100uS

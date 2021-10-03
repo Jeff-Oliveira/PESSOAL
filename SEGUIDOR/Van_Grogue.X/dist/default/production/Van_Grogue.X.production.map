@@ -398,10 +398,10 @@ END GROUP
 .debug_pubnames
  *(.debug_pubnames)
 
-.debug_info     0x0000000000000000     0x1675
+.debug_info     0x0000000000000000     0x1663
  *(.debug_info .gnu.linkonce.wi.*)
  .debug_info    0x0000000000000000      0x5f4 C:/Program Files/Microchip/MPLABX/v5.50/packs/Microchip/ATmega_DFP/2.3.126/xc8/avr/lib/avr5/memx-const/crtatmega328p.o
- .debug_info    0x00000000000005f4     0x1081 build/default/production/main.o
+ .debug_info    0x00000000000005f4     0x106f build/default/production/main.o
 
 .debug_abbrev   0x0000000000000000      0x894
  *(.debug_abbrev)
@@ -459,9 +459,9 @@ LOAD data_init
  .note.gnu.avr.deviceinfo
                 0x0000000000000000       0x40 C:/Program Files/Microchip/MPLABX/v5.50/packs/Microchip/ATmega_DFP/2.3.126/xc8/avr/lib/avr5/memx-const/crtatmega328p.o
 
-.bss.c_timer2.2124
+.bss.c_timer2.2123
                 0x0000000000800122        0x1
- .bss.c_timer2.2124
+ .bss.c_timer2.2123
                 0x0000000000800122        0x1 build/default/production/main.o
 
 .bss.parada.2119
