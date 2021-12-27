@@ -16,13 +16,13 @@
 #include "Driver_motor.h"     //Biblioteca das funções de controle dos motores  //usado para ponte H tb6612fng
 #include "PID.h"              //Biblioteca do controle PID
 #include "sensor_logic.h"     //lógica utilizando os sensores
-#include "dados.h"            //biblioteca que contém as funções atraladas ao envio de informações via UART
+//#include "dados.h"            //biblioteca que contém as funções atraladas ao envio de informações via UART
 /*============================================================*/
 
 /*==============================================================*/
 
 /*Macros*/
-
+#define NOP() __asm__ __volatile__ ("nop")
 
 /*Variáveis globais*/
 unsigned int PWMA = 0, PWMB = 0; // Modulação de largura de pulso enviada pelo PID
@@ -95,7 +95,6 @@ ISR(ADC_vect)
 int main(void) 
 {
     setup();
-
     while (1) loop();
     return 0;
 }//end main
@@ -170,8 +169,6 @@ void f_timers (void)
         f_timer5();
         c_timer5 = 0;
     }
-    
-    
     
 }//fim do RTOS
 
@@ -418,7 +415,7 @@ void f_timer3(void)     //10ms
 
     else 
     {   
-        telemetria();
+        //telemetria();
         c_timer2 = 0;
     }
 }
@@ -435,6 +432,6 @@ void f_timer5(void)
 {
     if(!f_stop)
     {
-        coleta_de_dados();
+        //coleta_de_dados();
     }
 }
