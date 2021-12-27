@@ -2,23 +2,23 @@
  *BIBLIOTECA PARA UTILIZAÇÃO DA UART
  * Modificada por: PROF. RODRIGO RECH
  * DATA: 09/2019
- *CONFIGURAÇÃO: BAUD RATE   -   9600
- *              NBITS       -   8
+ *CONFIGURAÇÃO: BAUD RATE 	-   9600 bps
+ *              N_BITS      -   8
  *              STOP BITS   -   1 
  */
 
 #include <avr/io.h> 	    //definições do componente especificado
 #include <avr/interrupt.h>
 
-void UART_config(unsigned int ubrr) 
+void UART_config() 
 {
-    UBRR0H = (unsigned char)(ubrr>>8);  //2 bits mais significativos de ubrr
-    UBRR0L = (unsigned char)ubrr;       //8 bits menos significativos de ubrr
+	//Baud Rate de 9600bps para um cristal de 16MHz (Datasheet)
+    UBRR0 = 103;    
    
     //Habilita a interrupção de recepção e os pinos TX e RX
-    UCSR0B =  (1<<RXEN0) | (1<<TXEN0) | (1<<RXCIE0);
-  
-  //Configura a UART com 8 bits de dados
+    UCSR0B =  (1<<RXEN0) | (1<<TXEN0) | (1<<RXCIE0) ;
+	
+	//Configura a UART com 8 bits de dados
     UCSR0C =  (1<<UCSZ01) | (1<<UCSZ00);  
 }
 
@@ -52,4 +52,19 @@ void  UART_enviaHex(unsigned char ch)
             UART_enviaCaractere(  'A' + temp - 10);
         ch = ch << 4;    
      }   
+}
+
+void rotina_UART(char *sensor[6]) /*função que printa valores na serial*/
+{   
+    char *buffer[6], //vetor que guarda o valor do AD
+         valor; 
+    
+    for(int i = 0; i<5; i++)
+    {
+        valor = *sensor[i];                     //  Lê A0
+        sprintf(buffer[i], "%4d\n", valor);    //  Converte para string 
+        UART_enviaString(buffer[i]);           //  Envia para o computador
+    }
+    
+    UART_enviaCaractere('\n');
 }

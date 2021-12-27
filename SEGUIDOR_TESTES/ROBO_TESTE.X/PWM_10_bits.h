@@ -1,13 +1,13 @@
 //PWM em fast mode de 10 bits do Timer 1 do atemga328p
 
-void setDuty_2(int duty) //MotorB
+void setDuty_R(int duty) //Motor_direito
 {
 
     OCR1B = duty; //registrador de PWM do OC1B
 
 } //end setDuty
 
-void setDuty_1(int duty) //MotorA
+void setDuty_L(int duty) //Motor_esquerdo
 {
 
     OCR1A = duty; //valores de 0 - 1023

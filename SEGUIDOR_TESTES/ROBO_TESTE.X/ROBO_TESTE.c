@@ -1,177 +1,145 @@
 /*Bibliotecas e frequência do uc*/
 #define F_CPU 16000000        //define a frequencia do uC para 16MHz
+#include <stdio.h>
 #include <avr/io.h>           //Biblioteca geral dos AVR
 #include <avr/interrupt.h>    //Biblioteca de interrupção
 #include <util/delay.h>       //Biblioteca geradora de atraso
 #include "PWM_10_bits.h"      //Biblioteca de PWM fast mode de 10 bits
-/*============================================================*/
+#include "MOTORES.h"          //Biblioteca para controle dos motores
+#include "UART.h"
+#include "INIT_CONFIG.h"      //Biblioteca para inicializar configurações do uC
+#include "SENSORES.h"         //Biblioteca dos sensores
+#include "PID.h"              //Biblioteca de controle 
 
-//variáveis de comando para os registradores
+/*======================================================================================*/
+// --- Mascaras de comando para os registradores
 #define set_bit(y,bit) (y|=(1<<bit)) //coloca em 1 o bit x da variável Y
 #define clr_bit(y,bit) (y&=~(1<<bit)) //coloca em 0 o bit x da variável Y
 #define cpl_bit(y,bit) (y^=(1<<bit)) //troca o estado lógico do bit x da variável Y
 #define tst_bit(y,bit) (y&(1<<bit)) //retorna 0 ou 1 conforme leitura do bit
 
-//------------- CONTROLE ROBO ------------
-#define DIR_L PD2 // 0 = frente 1 = tras
-#define DIR_R PD3 // 0 = frente 1 = tras
-#define ON_L  PB1
-#define ON_R  PB2
+// --- Leitura de sensores
+#define SB_0  (tst_bit(PINC, PC0))
+#define SB_1  (tst_bit(PINC, PC1))
+#define SB_2  (tst_bit(PINC, PC2))
+#define SB_3  (tst_bit(PINC, PC3))
+#define SB_4  (tst_bit(PINC, PC4))
+#define SB_5  (tst_bit(PINC, PC5))
 
+#define SP_0  (!tst_bit(PINC, PC0))
+#define SP_1  (!tst_bit(PINC, PC1))
+#define SP_2  (!tst_bit(PINC, PC2))
+#define SP_3  (!tst_bit(PINC, PC3))
+#define SP_4  (!tst_bit(PINC, PC4))
+#define SP_5  (!tst_bit(PINC, PC5))
 
 //------------- MODOULO_POLULU ----------
-char            f_sensor[6];
-unsigned char   sensor[6];
-#define S_0 PC0
-#define S_1 PC1
-#define S_2 PC2
-#define S_3 PC3
-#define S_4 PC4
-#define S_5 PC5
-#define LED PB4
+char  sensor[6]; // Vetor que passa e recebe os estados dos sensores
 
-void INIT_ROTINA();
-void config_timer();
-void f_timers();
-//-------------------------------------------
-void frente();
-void tras();
-void girar();
-void freio();
+//---------------------------------------
+//DECLARACAO DE FUNCOES
+void f_timers();    // Função base para temporização das rotinas com base no Timer_0
 
 //-------------------------------------------
 //VARIAVEIS GLOBAIS
-char micro;
-//-------------------------------------------
-char f_set_sensor;
-static char converte = 0;
+unsigned char timer;
+unsigned char PWM_L = 0,
+              PWM_R = 0;
+unsigned char valor;
 
-ISR(TIMER0_OVF_vect) // interrupcao TC0
+//-------------------------------------------
+// FLAGS
+static char f_on;   // Flag que é acionada via interrupção externa e que habilita (ON) o robô
+
+//-------------------------------------------
+//VARIAVEIS DA UART
+char ch;            //armazena o caracter lido
+char s[] = "APERTE PARA INICIAR...\n";
+
+//-------------------------------------------
+
+ISR(TIMER0_OVF_vect) // interrupcao Timer_0
 { 
     
-    TCNT0 = 254;    //Recarrega o Timer 0 para que a contagem seja 1us novamente
-    micro++;
+    TCNT0 = 56;    //Recarrega o Timer 0 para que a contagem seja 100us novamente
+    timer++;
     f_timers();
             
-}
+} /*fim da interrupção_Timer_0*/
+
+ISR (USART_RX_vect) // interrupcao UART
+{
+	    
+	ch = UDR0;		//envia buffer pela serial
+		
+	//Envia para o computador
+	UART_enviaCaractere(ch);
+	
+} /*fim da interrupção_UART*/
+
+ISR(PCINT2_vect) // interrupcao externa
+{ 
+    if (!(PIND & (1 << 4))) /* QUANDO PD4 FOR PRA 1 */
+    {        
+        if(f_on)
+        {
+            f_on = 0;
+        }
+        else
+        {
+            f_on = 1;
+        }
+    }            
+} /*fim da interrupção_externa*/
 
 int main()
 {
-            
-    DDRB  = 0b00000110;
-    PORTB = 0x00;
-    DDRC  = 0b00111111;
-    PORTC = 0x3F;
-    DDRD  = 0b00001110;
-    PORTD = 0x00;
+    cli();      // desabilita todas as interrupções
+ 
+// --- AREA DE INICIALIZACAO -----------------------------------------   
+    
+    UART_config();          //configura a comunicação serial
+    INIT_hardware();        //configura os perifericos do uC
+    INIT_timer();           //configura o timer do uC
+    INIT_intext();          //configura a interrupção externa
         
-    TCNT0 = 254;            // Recarrega o Timer 0 para que a contagem seja 1us novamente
-    TCCR0B = 0b00000010;    // TC0 com prescaler de 80, a 16 MHz gera uma interrupção a cada 1us 
-    TIMSK0 = 0b00000001;    // habilita a interrupção do TC0
+ //--- ENVIO DE MENSAGEM VIA UART -------------------------------------  
     
-    setFreq(4);
+    UART_enviaString(s);    //envia a string armazenada no vetor s
     
-    sei();
+ //--- ESCOLHA DA FREQUENCIA DO PWM -----------------------------------    
     
-    while(1)
-    {
-      
-    }
+    setFreq(3);  
+    
+ //--------------------------------------------------------------------
+    sei();          // habilita todas as interrupções
+        
+    while(1){}
    
-}
-
-void INIT_ROTINA()
-{
-    /*set_bit(PORTB, ON_L);
-    set_bit(PORTB, ON_R);
-    frente();*/    
-}
-
-void frente()
-{
-    cpl_bit(PORTD, DIR_L);
-    cpl_bit(PORTD, DIR_R);
-    _delay_ms(200);
-}
-
-void freio()
-{
-    setDuty_1(0);
-    setDuty_2(0);
-}
-
-void maq_sensores() 
-{
+    return 0;
     
-    if (f_set_sensor) 
+} /*END main*/
+
+void f_timers() // função que cria temporização para tomadas de tempo
+{
+    if (f_on)   //Só começa a contar a partir do momento que f_on = 1
     {
-        set_bit(PORTD, LED);
-        DDRD = 0x00;
-        PORTD = 0x3F;
-        
-        
-        for (int i = 0; i < 6; i++)
+        if ((timer > 2-1))  //Aciona a cada 100us
         {
-            //Limpa leitura dos sensores
-            sensor[i] = 0;
-            //limpa flag dos sensores
-            f_sensor[i] = 0;
+            maq_sensor();
         }
-       
-        while (converte == 0) {
-
-            // detecta sinal do sensor_0
-            if ((tst_bit(PORTC, S_0) == 0) && (f_sensor[0] == 0)) {
-                sensor[0] = ADC_ler(0);
-                f_sensor[0] = 1;
-            }
-
-            // detecta sinal do sensor_1
-            if ((tst_bit(PORTC, S_1) && (f_sensor[1] == 0)) {
-                sensor[1] = ADC_ler(1);
-                f_sensor[1] = 1;
-            }
-
-            // detecta sinal do sensor_2
-            if ((tst_bit(PORTC, S_2) && (f_sensor[2] == 0)) {
-                sensor[2] = ADC_ler(2);
-                f_sensor[2] = 1;
-            }
-
-            // detecta sinal do sensor_3
-            if ((tst_bit(PORTC, S_3) && (f_sensor[3] == 0)) {
-                sensor[3] = ADC_ler(3);
-                f_sensor[3] = 1;
-            }
-
-            // detecta sinal do sensor_4
-            if ((tst_bit(PORTC, S_4) && (f_sensor[4] == 0)) {
-                sensor[4] = ADC_ler(4);
-                f_sensor[4] = 1;
-            }
-
-            // detecta sinal do sensor_5
-
-            if ((tst_bit(PORTC, S_5) && (f_sensor[5] == 0)) {
-                sensor[5] = ADC_ler(5);
-                f_sensor[5] = 1;
-            }
-        } // fim da leitura dos sensores
-        // apaga led para economizar bateria e reseta a variavel
-        
-        clr_bit(PORTD, LED);
-        
-        converte = 1;
+        if ((timer > 4-1))  //Aciona a cada 200us 
+        {
+            rotina_sensor(sensor);
+            //rotina_motor(); 
+            //rotina_UART(sensor);
+            timer = 0;
+        }
+    } 
+    else
+    {
+        motor_off();
     }
     
-}
+} /*END f_timers*/
 
-void UART_enviaString(char *s) //configurar a UART para ler os sensores
-
-void f_timers() 
-{
-    if (micro == 10) 
-    {
-        f_set_sensor++;
-    }
-}
