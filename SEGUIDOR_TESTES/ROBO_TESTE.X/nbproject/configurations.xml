@@ -4,10 +4,13 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
-      <itemPath>UART.h</itemPath>
       <itemPath>PID.h</itemPath>
       <itemPath>ADC.h</itemPath>
       <itemPath>PWM_10_bits.h</itemPath>
+      <itemPath>UART.h</itemPath>
+      <itemPath>SENSORES.h</itemPath>
+      <itemPath>MOTORES.h</itemPath>
+      <itemPath>INIT_CONFIG.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
